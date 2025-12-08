@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Recipe Manager</title>
+    <style>
+      body {
+        display: flex;
+        font-family: Arial;
+        height: 100vh;
+        margin: 0;
+      }
+      #sidebar {
+        width: 250px;
+        background: #f0f0f0;
+        padding: 10px;
+        overflow-y: auto;
+        border-right: 2px solid #ddd;
+      }
+      #sidebar div {
+        padding: 8px;
+        margin: 5px 0;
+        cursor: pointer;
+        background: #fff;
+        border-radius: 5px;
+      }
+      #sidebar div:hover {
+        background: #dcdcdc;
+      }
+      #editor {
+        flex: 1;
+        padding: 20px;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      button {
+        padding: 10px 20px;
+        margin-right: 10px;
+      }
+      img {
+        border-radius: 8px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sidebar"></div>
+
+    <div id="editor">
+      <h2>Recipe Editor</h2>
+
+      <label>Meal Name</label>
+      <input id="strMeal" />
+
+      <label>Category</label>
+      <input id="strCategory" />
+
+      <label>Area</label>
+      <input id="strArea" />
+
+      <label>Thumbnail (strMealThumb)</label>
+      <!-- URL input -->
+      <input
+        type="text"
+        id="strMealThumbURL"
+        placeholder="Paste image URL here"
+      />
+      <p style="text-align: center; font-style: italic">OR</p>
+      <!-- File input -->
+      <input type="file" id="imageUpload" accept="image/*" />
+
+      <!-- Preview -->
+      <img id="preview" style="width: 180px; display: none" />
+
+      <label>Instructions</label>
+      <textarea id="strInstructions" rows="6"></textarea>
+
+      <button onclick="saveRecipe()">Save</button>
+      <button onclick="deleteRecipe()" style="background: red; color: white">
+        Delete
+      </button>
+    </div>
+
+    <script>
+      let uploadedImage = null;
+      let recipes = [];
+      let currentID = null;
+
+      const urlInput = document.getElementById("strMealThumbURL");
+      const fileInput = document.getElementById("imageUpload");
+      const preview = document.getElementById("preview");
+
+      // File input change
+      fileInput.addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          uploadedImage = event.target.result;
+          preview.src = uploadedImage;
+          preview.style.display = "block";
+
+          // Disable URL input
+          urlInput.disabled = true;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // URL input change
+      urlInput.addEventListener("input", function () {
+        if (urlInput.value.trim() !== "") {
+          // Clear and disable file input
+          fileInput.value = "";
+          uploadedImage = null;
+          fileInput.disabled = true;
+
+          preview.src = urlInput.value;
+          preview.style.display = "block";
+        } else {
+          // Re-enable file input if URL cleared
+          fileInput.disabled = false;
+          preview.style.display = uploadedImage ? "block" : "none";
+        }
+      });
+
+      async function loadRecipes() {
+        const res = await fetch("/recipes");
+        recipes = await res.json();
+        renderSidebar();
+      }
+
+      function renderSidebar() {
+        const sidebar = document.getElementById("sidebar");
+        sidebar.innerHTML = "";
+        recipes.forEach((r) => {
+          const div = document.createElement("div");
+          div.textContent = r.strMeal;
+          div.onclick = () => loadRecipe(r);
+          sidebar.appendChild(div);
+        });
+      }
+
+      function loadRecipe(recipe) {
+        currentID = recipe.idMeal;
+
+        document.getElementById("strMeal").value = recipe.strMeal;
+        document.getElementById("strCategory").value = recipe.strCategory;
+        document.getElementById("strArea").value = recipe.strArea;
+        document.getElementById("strInstructions").value =
+          recipe.strInstructions;
+
+        uploadedImage = null;
+        fileInput.value = "";
+        fileInput.disabled = false;
+        urlInput.value = "";
+        urlInput.disabled = false;
+
+        if (recipe.strMealThumb) {
+          if (recipe.strMealThumb.startsWith("data:")) {
+            // Base64 image
+            uploadedImage = recipe.strMealThumb;
+            preview.src = uploadedImage;
+            preview.style.display = "block";
+            urlInput.disabled = true;
+          } else {
+            // URL image
+            urlInput.value = recipe.strMealThumb;
+            preview.src = recipe.strMealThumb;
+            preview.style.display = "block";
+            fileInput.disabled = true;
+          }
+        } else {
+          preview.style.display = "none";
+        }
+      }
+
+      async function saveRecipe() {
+        if (!currentID) return alert("Select a recipe first!");
+
+        const thumbValue = uploadedImage || urlInput.value;
+
+        const updated = {
+          strMeal: document.getElementById("strMeal").value,
+          strCategory: document.getElementById("strCategory").value,
+          strArea: document.getElementById("strArea").value,
+          strInstructions: document.getElementById("strInstructions").value,
+          strMealThumb: thumbValue,
+        };
+
+        await fetch(`/recipes/${currentID}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updated),
+        });
+
+        alert("Saved!");
+        loadRecipes();
+      }
+
+      async function deleteRecipe() {
+        if (!currentID) return alert("Select a recipe first!");
+
+        await fetch(`/recipes/${currentID}`, { method: "DELETE" });
+
+        alert("Deleted!");
+        currentID = null;
+        loadRecipes();
+      }
+
+      loadRecipes();
+    </script>
+  </body>
+</html>
