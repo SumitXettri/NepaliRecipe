@@ -2,6 +2,7 @@
 
 1. Git clone
 ```
+  git init
   git clone https://github.com/SumitXettri/NepaliRecipe.git
   cd nepalirecipe
 ```
