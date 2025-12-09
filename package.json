@@ -9,8 +9,16 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "** INSTALLATION",
   "dependencies": {
     "express": "^5.2.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SumitXettri/NepaliRecipe.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SumitXettri/NepaliRecipe/issues"
+  },
+  "homepage": "https://github.com/SumitXettri/NepaliRecipe#readme"
 }
